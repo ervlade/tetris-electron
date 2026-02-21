@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tetris</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen">
+    <div class="title-container">
+      <h1 class="game-title">TETRIS</h1>
+      <div class="title-blocks">
+        <span class="block-i"></span>
+        <span class="block-o"></span>
+        <span class="block-t"></span>
+        <span class="block-s"></span>
+        <span class="block-z"></span>
+        <span class="block-j"></span>
+        <span class="block-l"></span>
+      </div>
+    </div>
+    <button id="start-btn" class="btn">JUGAR</button>
+    <div class="controls-info">
+      <p><kbd>&larr;</kbd> <kbd>&rarr;</kbd> Mover</p>
+      <p><kbd>&uarr;</kbd> Rotar</p>
+      <p><kbd>&darr;</kbd> Bajar</p>
+      <p><kbd>Espacio</kbd> Caida rapida</p>
+      <p><kbd>P</kbd> Pausa</p>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen hidden">
+    <div class="game-layout">
+      <div class="board-container">
+        <canvas id="game-board" width="300" height="600"></canvas>
+        <div id="pause-overlay" class="overlay hidden">
+          <span>PAUSA</span>
+        </div>
+      </div>
+      <div class="side-panel">
+        <div class="panel-section">
+          <h3>SIGUIENTE</h3>
+          <canvas id="next-piece" width="120" height="120"></canvas>
+        </div>
+        <div class="panel-section">
+          <h3>PUNTOS</h3>
+          <div id="score" class="stat-value">0</div>
+        </div>
+        <div class="panel-section">
+          <h3>NIVEL</h3>
+          <div id="level" class="stat-value">1</div>
+        </div>
+        <div class="panel-section">
+          <h3>LINEAS</h3>
+          <div id="lines" class="stat-value">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="gameover-screen" class="screen hidden">
+    <h1 class="gameover-title">GAME OVER</h1>
+    <div class="final-stats">
+      <p>Puntos: <span id="final-score">0</span></p>
+      <p>Nivel: <span id="final-level">1</span></p>
+      <p>Lineas: <span id="final-lines">0</span></p>
+    </div>
+    <button id="restart-btn" class="btn">JUGAR DE NUEVO</button>
+    <button id="menu-btn" class="btn btn-secondary">MENU</button>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
