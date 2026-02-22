@@ -272,36 +272,36 @@
     /* Touch Controls */
     .touch-controls {
       display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 10px 16px 20px;
+      width: 100%;
+      padding: 8px 10px;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom, 12px));
       justify-content: space-between;
       align-items: center;
       z-index: 20;
-      background: linear-gradient(transparent, rgba(0,0,0,0.6));
+      margin-top: auto;
+      flex-shrink: 0;
     }
 
     .touch-left, .touch-right {
       display: flex;
-      gap: 8px;
+      gap: 6px;
     }
 
     .touch-btn {
-      width: 56px;
-      height: 56px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       border: 2px solid rgba(255,255,255,0.2);
       background: rgba(255,255,255,0.08);
       color: rgba(255,255,255,0.6);
-      font-size: 22px;
+      font-size: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       transition: background 0.1s;
+      flex-shrink: 0;
     }
 
     .touch-btn:active {
@@ -310,9 +310,9 @@
     }
 
     .touch-btn-wide {
-      width: 80px;
-      border-radius: 28px;
-      font-size: 12px;
+      width: 64px;
+      border-radius: 24px;
+      font-size: 11px;
       font-family: 'Press Start 2P', monospace;
     }
 
@@ -321,11 +321,15 @@
       .game-title { font-size: 32px; letter-spacing: 4px; }
       .controls-info { display: none; }
 
+      #game-screen {
+        justify-content: flex-start;
+      }
+
       .game-layout {
         flex-direction: column;
         align-items: center;
-        gap: 10px;
-        padding: 8px;
+        gap: 6px;
+        padding: 6px 8px;
       }
 
       #game-board {
@@ -337,12 +341,12 @@
         flex-direction: row;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
         min-width: unset;
       }
 
       .panel-section {
-        padding: 8px 12px;
+        padding: 6px 10px;
       }
 
       .panel-section h3 { font-size: 8px; margin-bottom: 4px; }
@@ -367,14 +371,43 @@
       .side-panel { gap: 4px; }
       .panel-section { padding: 4px 8px; }
 
-      .touch-controls { padding: 6px 12px 12px; }
-      .touch-btn { width: 48px; height: 48px; font-size: 18px; }
-      .touch-btn-wide { width: 68px; font-size: 10px; }
+      .touch-controls { padding: 4px 8px; padding-bottom: calc(4px + env(safe-area-inset-bottom, 8px)); }
+      .touch-btn { width: 44px; height: 44px; font-size: 18px; }
+      .touch-btn-wide { width: 58px; font-size: 10px; }
     }
 
     @media (pointer: coarse) {
+      #game-screen { justify-content: flex-start; }
       .touch-controls { display: flex; }
       .controls-info { display: none; }
+    }
+
+    /* Mute Button */
+    .mute-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 15;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.6);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .mute-btn:active {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.4);
     }
   </style>
 </head>
@@ -405,6 +438,7 @@
 
   <!-- Game Screen -->
   <div id="game-screen" class="screen hidden">
+    <button id="btn-mute" class="mute-btn" aria-label="Silenciar">&#x1F50A;</button>
     <div class="game-layout">
       <div class="board-container">
         <canvas id="game-board" width="300" height="600"></canvas>
@@ -569,6 +603,14 @@
     let animationId = null;
     let bag = [];
 
+    // Audio state
+    let audioCtx = null;
+    let masterGain = null;
+    let musicGain = null;
+    let melodyIndex = 0;
+    let melodyTimeout = null;
+    let isMuted = false;
+
     // DOM
     const canvas = document.getElementById('game-board');
     const ctx = canvas.getContext('2d');
@@ -590,6 +632,7 @@
     document.getElementById('start-btn').addEventListener('click', startGame);
     document.getElementById('restart-btn').addEventListener('click', startGame);
     document.getElementById('menu-btn').addEventListener('click', showMenu);
+    document.getElementById('btn-mute').addEventListener('click', toggleMute);
 
     // ============================================================
     // Screen Management
@@ -603,6 +646,7 @@
     function showMenu() {
       clearInterval(dropTimer);
       cancelAnimationFrame(animationId);
+      stopMusic();
       showScreen(startScreen);
     }
 
@@ -714,6 +758,7 @@
       if (cleared > 0) {
         score += LINE_POINTS[cleared] * level;
         lines += cleared;
+        playLineClear(cleared);
 
         const newLevel = Math.floor(lines / LINES_PER_LEVEL) + 1;
         if (newLevel !== level) {
@@ -759,12 +804,14 @@
     function moveLeft() {
       if (isValid(currentPiece, currentPiece.rotation, currentPiece.x - 1, currentPiece.y)) {
         currentPiece.x--;
+        playMove();
       }
     }
 
     function moveRight() {
       if (isValid(currentPiece, currentPiece.rotation, currentPiece.x + 1, currentPiece.y)) {
         currentPiece.x++;
+        playMove();
       }
     }
 
@@ -793,6 +840,7 @@
       }
       score += dropDistance * 2;
       updateUI();
+      playHardDrop();
       lockPiece();
     }
 
@@ -801,6 +849,7 @@
 
       if (isValid(currentPiece, newRotation, currentPiece.x, currentPiece.y)) {
         currentPiece.rotation = newRotation;
+        playRotate();
         return;
       }
 
@@ -813,6 +862,7 @@
           currentPiece.x += dx;
           currentPiece.y += dy;
           currentPiece.rotation = newRotation;
+          playRotate();
           return;
         }
       }
@@ -977,10 +1027,155 @@
     }
 
     // ============================================================
+    // Audio Engine
+    // ============================================================
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.connect(audioCtx.destination);
+      musicGain = audioCtx.createGain();
+      musicGain.gain.value = 0.3;
+      musicGain.connect(masterGain);
+    }
+
+    // Korobeiniki melody: [frequency, beats] (0 = rest, beat unit = 150ms)
+    const MELODY = [
+      [329.63,2],[246.94,1],[261.63,1],[293.66,2],[261.63,1],[246.94,1],
+      [220.00,2],[220.00,1],[261.63,1],[329.63,2],[293.66,1],[261.63,1],
+      [246.94,2],[246.94,1],[261.63,1],[293.66,2],[329.63,2],
+      [261.63,2],[220.00,2],[220.00,2],[0,2],
+      [293.66,2],[349.23,1],[440.00,2],[392.00,1],[349.23,1],
+      [329.63,2],[261.63,1],[329.63,2],[293.66,1],[261.63,1],
+      [246.94,2],[246.94,1],[261.63,1],[293.66,2],[329.63,2],
+      [261.63,2],[220.00,2],[220.00,2],[0,2],
+    ];
+
+    function playMelodyNote() {
+      if (!audioCtx || gameOver) return;
+      const [freq, beats] = MELODY[melodyIndex % MELODY.length];
+      const duration = beats * 0.15;
+
+      if (freq > 0) {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration - 0.02);
+        osc.connect(g);
+        g.connect(musicGain);
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + duration);
+      }
+
+      melodyIndex++;
+      melodyTimeout = setTimeout(playMelodyNote, duration * 1000);
+    }
+
+    function startMusic() {
+      stopMusic();
+      melodyIndex = 0;
+      playMelodyNote();
+    }
+
+    function stopMusic() {
+      if (melodyTimeout) { clearTimeout(melodyTimeout); melodyTimeout = null; }
+    }
+
+    function pauseMusic() { stopMusic(); }
+
+    function resumeMusic() {
+      if (!gameOver) playMelodyNote();
+    }
+
+    // Sound effects
+    function playMove() {
+      if (!audioCtx || isMuted) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.value = 200;
+      g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      o.connect(g); g.connect(masterGain);
+      o.start(); o.stop(audioCtx.currentTime + 0.05);
+    }
+
+    function playRotate() {
+      if (!audioCtx || isMuted) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(300, audioCtx.currentTime);
+      o.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.08);
+      g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      o.connect(g); g.connect(masterGain);
+      o.start(); o.stop(audioCtx.currentTime + 0.08);
+    }
+
+    function playHardDrop() {
+      if (!audioCtx || isMuted) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(400, audioCtx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+      g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      o.connect(g); g.connect(masterGain);
+      o.start(); o.stop(audioCtx.currentTime + 0.15);
+    }
+
+    function playLineClear(count) {
+      if (!audioCtx || isMuted) return;
+      const freqs = [523.25, 659.25, 783.99, 1046.50];
+      const n = Math.min(count + 1, 4);
+      for (let i = 0; i < n; i++) {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'square';
+        o.frequency.value = freqs[i];
+        const t = audioCtx.currentTime + i * 0.08;
+        g.gain.setValueAtTime(0.2, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+        o.connect(g); g.connect(masterGain);
+        o.start(t); o.stop(t + 0.15);
+      }
+    }
+
+    function playGameOver() {
+      if (!audioCtx || isMuted) return;
+      const notes = [329.63, 293.66, 261.63, 220.00];
+      notes.forEach((freq, i) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.value = freq;
+        const t = audioCtx.currentTime + i * 0.2;
+        g.gain.setValueAtTime(0.25, t);
+        g.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        o.connect(g); g.connect(masterGain);
+        o.start(t); o.stop(t + 0.3);
+      });
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      if (masterGain) masterGain.gain.value = isMuted ? 0 : 1;
+      document.getElementById('btn-mute').textContent = isMuted ? '\u{1F507}' : '\u{1F50A}';
+    }
+
+    // ============================================================
     // Game Control
     // ============================================================
 
     function startGame() {
+      initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
       createBoard();
       score = 0;
       level = 1;
@@ -1000,12 +1195,15 @@
 
       cancelAnimationFrame(animationId);
       gameLoop();
+      startMusic();
     }
 
     function endGame() {
       gameOver = true;
       clearInterval(dropTimer);
       cancelAnimationFrame(animationId);
+      stopMusic();
+      playGameOver();
 
       finalScoreEl.textContent = score.toLocaleString();
       finalLevelEl.textContent = level;
@@ -1023,9 +1221,11 @@
       if (paused) {
         clearInterval(dropTimer);
         pauseOverlay.classList.remove('hidden');
+        pauseMusic();
       } else {
         resetDropTimer();
         pauseOverlay.classList.add('hidden');
+        resumeMusic();
       }
     }
 
