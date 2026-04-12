@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiempo en Sevilla - Informe Meteorológico</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>Tiempo en Sevilla</h1>
+            <p class="subtitle">Informe Meteorológico en Tiempo Real</p>
+            <p class="source">Datos de <a href="https://open-meteo.com/" target="_blank">Open-Meteo API</a> (modelos ECMWF/GFS)</p>
+            <p class="last-update" id="lastUpdate"></p>
+        </header>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Cargando datos meteorológicos...</p>
+        </div>
+
+        <div id="error" class="error hidden">
+            <p>Error al cargar los datos. <button onclick="loadWeatherData()">Reintentar</button></p>
+        </div>
+
+        <main id="content" class="content hidden">
+            <!-- Current conditions -->
+            <section class="current-section">
+                <div class="current-main">
+                    <div class="current-temp">
+                        <span class="weather-icon" id="currentIcon"></span>
+                        <div class="temp-display">
+                            <span class="temp-value" id="currentTemp"></span>
+                            <span class="temp-unit">°C</span>
+                        </div>
+                        <p class="weather-desc" id="currentDesc"></p>
+                    </div>
+                    <div class="current-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Sensación térmica</span>
+                            <span class="detail-value" id="feelsLike"></span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Humedad</span>
+                            <span class="detail-value" id="humidity"></span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Precipitación</span>
+                            <span class="detail-value" id="precipitation"></span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Viento</span>
+                            <span class="detail-value" id="wind"></span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Rachas</span>
+                            <span class="detail-value" id="gusts"></span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Dirección viento</span>
+                            <span class="detail-value" id="windDir"></span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Presión</span>
+                            <span class="detail-value" id="pressure"></span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Índice UV</span>
+                            <span class="detail-value" id="uvIndex"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Precipitation focus -->
+            <section class="section">
+                <h2>Precipitación - Próximas 24 horas</h2>
+                <div class="precip-chart" id="precipChart"></div>
+            </section>
+
+            <!-- Hourly forecast -->
+            <section class="section">
+                <h2>Pronóstico por Horas (Próximas 24h)</h2>
+                <div class="hourly-scroll" id="hourlyForecast"></div>
+            </section>
+
+            <!-- Daily forecast -->
+            <section class="section">
+                <h2>Pronóstico 7 Días</h2>
+                <div class="daily-forecast" id="dailyForecast"></div>
+            </section>
+
+            <!-- Temperature chart -->
+            <section class="section">
+                <h2>Temperatura - Próximas 24 horas</h2>
+                <div class="temp-chart" id="tempChart"></div>
+            </section>
+
+            <!-- Sun info -->
+            <section class="section sun-section">
+                <h2>Sol</h2>
+                <div class="sun-info" id="sunInfo"></div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>Datos proporcionados por <a href="https://open-meteo.com/" target="_blank">Open-Meteo.com</a> | Coordenadas: 37.3886°N, 5.9823°O (Sevilla, España)</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
